@@ -1,6 +1,6 @@
 import boto3
 from botocore.client import Config
-from worker.core.config import settings
+from app.core.config import settings
 
 class FileSystemClient:
     def __init__(self):
@@ -18,7 +18,40 @@ class FileSystemClient:
         )
         self.bucket = settings.BUCKET_NAME
 
-    def upload_video(self, file_path: str, object_name: str, user_id: str, processed: bool = False):
+    # descargar video y guardar en alguna ruta local
+    def download_video_file(self, download_path: str, filename: str, user_id: int, group_id: int):
+        
+        object_name = f"{user_id}/{group_id}/{filename}"
+        
+        try:
+            self.s3_client.download_file(
+                Bucket=self.bucket,
+                Key=object_name,
+                Filename=download_path
+            )
+            print(f"Successfully downloaded {object_name} to {download_path}")
+            return True
+
+        except Exception as e:
+            print(f"Error downloading file from MinIO: {e}")
+            raise
+
+    # Subir video en stream a MinIO directamente
+    def upload_video_stream(self, file_stream, filename: str, user_id: str, size: int, group_id: int):
+        """Sube video en stream directamente al mino sin guardarlo en ningún directorio del backend"""
+
+        object_name = f"{user_id}/{group_id}/{filename}"
+
+        self.s3_client.put_object(
+            Bucket=self.bucket,
+            Key=object_name,
+            Body=file_stream,
+            ContentLength=size,
+            ContentType="video/mp4"
+        )
+
+    # Subir video desde archivo a un directorio local
+    def upload_video_file(self, file_path: str, object_name: str, user_id: str, processed: bool = False):
         """Upload a video file to the filesystem bucket."""
         try:
             # tries to create the bucket on upload
