@@ -5,5 +5,5 @@ trained
 app/tmp/*
 tmp
 runs
-code
+./code
 task_redis
