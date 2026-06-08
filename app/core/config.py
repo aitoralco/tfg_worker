@@ -33,4 +33,9 @@ class Settings(BaseSettings):
     # Pydantic busca en el .env
     model_config = SettingsConfigDict(env_file=".env", env_file_encodings="utf-8")
 
+    # Ajustes de directorios del worker
+    DW_MODEL_PATH: str
+    DM_MODEL_PATH: str
+
+
 settings = Settings()

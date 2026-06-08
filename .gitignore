@@ -2,3 +2,8 @@
 pyproject.toml
 uv.lock
 trained
+app/tmp/*
+tmp
+runs
+code
+task_redis

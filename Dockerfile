@@ -22,4 +22,4 @@ COPY . /worker
 EXPOSE 8500
 
 # Comando para arrancar el worker
-CMD ["python" "main.py"]
+CMD ["python","-m" "app.main"]
