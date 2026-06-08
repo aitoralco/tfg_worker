@@ -72,3 +72,25 @@ class FileSystemClient:
         except Exception as e:
             print(f"Error uploading file: {e}")
             raise
+
+
+    def upload_file(self, local_path: str, remote_key: str):
+        """Sube un archivo local a MinIO con la key exacta indicada."""
+        try:
+            self.s3_client.upload_file(local_path, self.bucket, remote_key)
+            print(f"Uploaded {local_path} → {remote_key}")
+        except Exception as e:
+            print(f"Error uploading file: {e}")
+            raise
+
+
+    def upload_directory(self, local_dir: str, remote_prefix: str):
+        """Sube recursivamente todos los archivos de un directorio local a MinIO."""
+        import os
+        for root, _, files in os.walk(local_dir):
+            for filename in files:
+                local_path = os.path.join(root, filename)
+                # Mantener estructura de subdirectorios relativa
+                relative_path = os.path.relpath(local_path, local_dir)
+                remote_key = f"{remote_prefix}{relative_path}".replace("\\", "/")
+                self.upload_file(local_path, remote_key)
