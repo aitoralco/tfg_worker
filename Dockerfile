@@ -9,6 +9,13 @@ ENV PYTHONUNBUFFERED=1
 # Directorio de trabajo dentro del contenedor
 WORKDIR /worker
 
+# Install native linux dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copiar archivo de requirements.txt
 COPY ./requirements.txt /worker/requirements.txt
 
