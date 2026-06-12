@@ -28,8 +28,9 @@ class RedisEngine:
         # Encuar tasca
         try:
             job = self.queue.enqueue(
-                function, 
-                json.dumps(job_data)
+                function,
+                json.dumps(job_data),
+                job_timeout=-1,
             )
             # Al encuar sempre fem al redis i sempre es una tasca de processament de video
         
