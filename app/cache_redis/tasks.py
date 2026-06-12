@@ -21,7 +21,8 @@ def process_video(video_id: int):
     db: Session = next(db_generator)
 
     # Directorio temporal del job — aislado por video_id para evitar colisiones
-    job_tmp_dir = f"/tmp/job_{video_id}"
+    os.makedirs("/video_processing", exist_ok=True)
+    job_tmp_dir = f"/video_processing/job_{video_id}"
 
     try:
         # --- Obtener info del video ---
@@ -72,11 +73,12 @@ def process_video(video_id: int):
         dw_annotated_video = _find_annotated_video(dw_output_dir, filename)
         dw_annotated_video = _convert_to_mp4(dw_annotated_video)
 
-        # Subir vídeo anotado y labels a MinIO
+        # Subir vídeo anotado y labels a MinIO y borrar localmente
         fs_client.upload_file(
             local_path=dw_annotated_video,
             remote_key=f"{user_id}/{group_id}/{video_id}/dw/{os.path.basename(dw_annotated_video)}",
         )
+        os.remove(dw_annotated_video)
         fs_client.upload_directory(
             local_dir=dw_labels_dir,
             remote_prefix=f"{user_id}/{group_id}/{video_id}/dw/labels/",
@@ -91,19 +93,25 @@ def process_video(video_id: int):
         ew_output_dir = os.path.join(job_tmp_dir, "ew_output")
         os.makedirs(ew_output_dir, exist_ok=True)
 
+        # whale_cropping necesita el vídeo original para extraer los recortes
         video_processor.whale_cropping(
             videos_dir=os.path.dirname(video_path),
             labels_dir=dw_labels_dir,
             output_dir=ew_output_dir,
         )
 
+        # El vídeo original ya no se necesita a partir de aquí
+        os.remove(video_path)
+        logger.info(f"[{video_id}] Vídeo original eliminado: {video_path}")
+
         ew_crops_subdir = os.path.join(ew_output_dir, os.path.splitext(filename)[0])
 
-        # Subir recortes a MinIO
+        # Subir recortes a MinIO y borrar localmente
         fs_client.upload_directory(
             local_dir=ew_output_dir,
             remote_prefix=f"{user_id}/{group_id}/{video_id}/ew/",
         )
+        shutil.rmtree(ew_output_dir)
         logger.info(f"[{video_id}] Fase EW completada y subida a MinIO.")
 
         # -------------------------------------------------------
@@ -123,6 +131,7 @@ def process_video(video_id: int):
             local_dir=dem_output_dir,
             remote_prefix=f"{user_id}/{group_id}/{video_id}/dem/",
         )
+        shutil.rmtree(dem_output_dir)
         logger.info(f"[{video_id}] Fase DEM completada y subida a MinIO.")
 
         # -------------------------------------------------------
@@ -141,10 +150,10 @@ def process_video(video_id: int):
             pass
 
     finally:
-        # Limpiar temporales siempre, tanto en éxito como en error
+        # Limpieza de seguridad: elimina cualquier temporal restante del job
         if os.path.exists(job_tmp_dir):
-            # shutil.rmtree(job_tmp_dir)
-            logger.info(f"[{video_id}] Temporales eliminados: {job_tmp_dir}")
+            shutil.rmtree(job_tmp_dir)
+            logger.info(f"[{video_id}] Directorio temporal eliminado: {job_tmp_dir}")
         try:
             db.close()
         except Exception:
