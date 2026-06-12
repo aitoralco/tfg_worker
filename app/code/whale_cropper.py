@@ -1,9 +1,12 @@
+import logging
 import os
 import re
 from pathlib import Path
 
 import cv2
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 def generate_clean_whale_dataset(videos_dir, labels_dir, output_dir):
@@ -14,6 +17,8 @@ def generate_clean_whale_dataset(videos_dir, labels_dir, output_dir):
 
     label_files = [f for f in os.listdir(labels_dir) if f.endswith(".txt")]
     video_to_labels = {}
+
+    logger.info(f"EW: {len(label_files)} label files encontrados en {labels_dir}")
 
     for lf in label_files:
         match = re.search(r"^(.*)_(\d+)\.txt$", lf)
@@ -28,69 +33,72 @@ def generate_clean_whale_dataset(videos_dir, labels_dir, output_dir):
         if not video_file:
             continue
 
-        print(f"Processing Clean Frames: {v_name}")
-        cap = cv2.VideoCapture(str(video_file))
-        detections.sort()  # Process frames in order for speed
-
+        # Índice: frame_idx -> lista de label files — permite lectura secuencial sin seeks
+        detections.sort()
+        detection_map = {}
         for f_idx, lf_name in detections:
-            cap.set(cv2.CAP_PROP_POS_FRAMES, f_idx)
+            detection_map.setdefault(f_idx, []).append(lf_name)
+
+        max_frame = detections[-1][0]
+        total_detections = len(detections)
+        logger.info(f"EW [{v_name}]: {total_detections} frames con detecciones, leyendo hasta frame {max_frame}")
+
+        cap = cv2.VideoCapture(str(video_file))
+        current_frame = 0
+        crops_saved = 0
+
+        while current_frame <= max_frame:
             ret, frame = cap.read()
             if not ret:
-                continue
+                break
 
-            img_h, img_w = frame.shape[:2]
+            if current_frame in detection_map:
+                img_h, img_w = frame.shape[:2]
 
-            with open(labels_path / lf_name, "r") as f:
-                for obj_idx, line in enumerate(f.readlines()):
-                    parts = list(map(float, line.split()))
+                for lf_name in detection_map[current_frame]:
+                    with open(labels_path / lf_name, "r") as f:
+                        for obj_idx, line in enumerate(f.readlines()):
+                            parts = list(map(float, line.split()))
 
-                    a_num = 0
+                            if len(parts) >= 9:
+                                coords = np.array(parts[1:9]).reshape((4, 2))
+                                coords[:, 0] *= img_w
+                                coords[:, 1] *= img_h
+                                center = np.mean(coords, axis=0)
 
-                    # If line has 9 (no conf) or 10 (with conf) values:
-                    if len(parts) >= 9:
-                        # Grab exactly the 8 coordinates (index 1 to 8)
-                        coords = np.array(parts[1:9]).reshape((4, 2))
-                        coords[:, 0] *= img_w
-                        coords[:, 1] *= img_h
-                        center = np.mean(coords, axis=0)
+                                dist_01 = np.linalg.norm(coords[0] - coords[1])
+                                dist_12 = np.linalg.norm(coords[1] - coords[2])
 
-                        dist_01 = np.linalg.norm(coords[0] - coords[1])
-                        dist_12 = np.linalg.norm(coords[1] - coords[2])
+                                if dist_01 >= dist_12:
+                                    dy = coords[1][1] - coords[0][1]
+                                    dx = coords[1][0] - coords[0][0]
+                                else:
+                                    dy = coords[2][1] - coords[1][1]
+                                    dx = coords[2][0] - coords[1][0]
 
-                        if dist_01 >= dist_12:
-                            dy = coords[1][1] - coords[0][1]
-                            dx = coords[1][0] - coords[0][0]
+                                angle = np.degrees(np.arctan2(dy, dx))
+                                rotation_angle = 90 + angle
 
-                        else:
-                            dy = coords[2][1] - coords[1][1]
-                            dx = coords[2][0] - coords[1][0]
+                                width = np.linalg.norm(coords[0] - coords[1])
+                                height = np.linalg.norm(coords[1] - coords[2])
+                                side = int(max(width, height) * 1.3)
+                            else:
+                                continue
 
-                        angle = np.degrees(np.arctan2(dy, dx))
+                            M = cv2.getRotationMatrix2D(center, rotation_angle, 1.0)
+                            rotated = cv2.warpAffine(frame, M, (img_w, img_h))
+                            crop = cv2.getRectSubPix(rotated, (side, side), center)
 
-                        rotation_angle = 90 + angle
+                            if crop is not None:
+                                save_dir = output_path / v_name
+                                save_dir.mkdir(exist_ok=True)
+                                save_name = f"{v_name}_f{current_frame}_obj{obj_idx}_a{rotation_angle}.jpg"
+                                cv2.imwrite(str(save_dir / save_name), crop)
+                                crops_saved += 1
 
-                        # Get dimensions for the square crop
-                        width = np.linalg.norm(coords[0] - coords[1])
-                        height = np.linalg.norm(coords[1] - coords[2])
-                        side = int(max(width, height) * 1.3)  # 30% padding for whales
-                    else:
-                        continue
-
-                    # Execute the Rotation and 1:1 Crop
-                    # print(f"Angle: {angle}, in image: {v_name}, fame: {f_idx}")
-                    M = cv2.getRotationMatrix2D(center, rotation_angle, 1.0)
-                    rotated = cv2.warpAffine(frame, M, (img_w, img_h))
-
-                    # GetRectSubPix handles sub-pixel centering beautifully
-                    crop = cv2.getRectSubPix(rotated, (side, side), center)
-
-                    if crop is not None:
-                        save_dir = output_path / v_name
-                        save_dir.mkdir(exist_ok=True)
-                        save_name = (
-                            f"{v_name}_f{f_idx}_obj{obj_idx}_a{rotation_angle}.jpg"
-                        )
-                        cv2.imwrite(str(save_dir / save_name), crop)
+            current_frame += 1
 
         cap.release()
-    print("Clean Whale Dataset Ready!")
+        logger.info(f"EW [{v_name}]: completado — {crops_saved} recortes guardados")
+
+    logger.info(f"EW: proceso finalizado para {len(video_to_labels)} vídeo(s)")
