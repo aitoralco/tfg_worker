@@ -191,22 +191,25 @@ def _convert_to_mp4(input_path: str) -> str:
 
     logger.info(f"Convirtiendo vídeo a mp4: {input_path} → {output_path}")
 
-    result = subprocess.run(
-        [
-            "ffmpeg", "-y",
-            "-i", input_path,
-            "-c:v", "libx264",
-            "-preset", "fast",
-            "-c:a", "copy",
-            output_path,
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-        stdin=subprocess.DEVNULL,
-    )
-
-    logger.debug(f"ffmpeg output: {result.stderr}")
+    try:
+        result = subprocess.run(
+            [
+                "ffmpeg", "-y",
+                "-i", input_path,
+                "-c:v", "libx264",
+                "-preset", "fast",
+                "-c:a", "copy",
+                output_path,
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            stdin=subprocess.DEVNULL,
+        )
+        logger.debug(f"ffmpeg stderr: {result.stderr}")
+    except subprocess.CalledProcessError as e:
+        logger.error(f"ffmpeg falló (exit {e.returncode}):\n{e.stderr}")
+        raise
     os.remove(input_path)
     logger.info(f"Conversión completada: {output_path}")
     return output_path
