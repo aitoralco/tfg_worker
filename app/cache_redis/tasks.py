@@ -172,7 +172,7 @@ def _find_annotated_video(output_dir: str, original_filename: str) -> str:
     search_dir = predict_dir if os.path.exists(predict_dir) else output_dir
 
     for f in os.listdir(search_dir):
-        if f.startswith(base_name) and f.endswith((".mp4", ".avi", ".mov")):
+        if f.startswith(base_name) and f.lower().endswith((".mp4", ".avi", ".mov")):
             return os.path.join(search_dir, f)
     raise FileNotFoundError(
         f"No se encontró vídeo anotado para '{original_filename}' en '{output_dir}'"
@@ -189,19 +189,24 @@ def _convert_to_mp4(input_path: str) -> str:
     base = os.path.splitext(input_path)[0]
     output_path = f"{base}_annotated.mp4"
 
-    subprocess.run(
+    logger.info(f"Convirtiendo vídeo a mp4: {input_path} → {output_path}")
+
+    result = subprocess.run(
         [
             "ffmpeg", "-y",
             "-i", input_path,
             "-c:v", "libx264",
             "-preset", "fast",
             "-c:a", "copy",
+            "-progress", "pipe:2",
             output_path,
         ],
         check=True,
         capture_output=True,
+        text=True,
     )
 
+    logger.debug(f"ffmpeg output: {result.stderr}")
     os.remove(input_path)
-    logger.info(f"Vídeo convertido a mp4: {output_path}")
+    logger.info(f"Conversión completada: {output_path}")
     return output_path
