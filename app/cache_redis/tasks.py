@@ -70,6 +70,7 @@ def process_video(video_id: int):
         # YOLO guarda: vídeo anotado en dw_output_dir/ y labels en dw_output_dir/labels/
         dw_labels_dir = os.path.join(dw_output_dir, "predict", "labels")
         dw_annotated_video = _find_annotated_video(dw_output_dir, filename)
+        dw_annotated_video = _convert_to_mp4(dw_annotated_video)
 
         # Subir vídeo anotado y labels a MinIO
         fs_client.upload_file(
@@ -176,3 +177,31 @@ def _find_annotated_video(output_dir: str, original_filename: str) -> str:
     raise FileNotFoundError(
         f"No se encontró vídeo anotado para '{original_filename}' en '{output_dir}'"
     )
+
+
+def _convert_to_mp4(input_path: str) -> str:
+    """
+    Convierte el vídeo de salida de YOLO a .mp4 (H.264) y añade sufijo _annotated.
+    Elimina el fichero original tras la conversión.
+    """
+    import subprocess
+
+    base = os.path.splitext(input_path)[0]
+    output_path = f"{base}_annotated.mp4"
+
+    subprocess.run(
+        [
+            "ffmpeg", "-y",
+            "-i", input_path,
+            "-c:v", "libx264",
+            "-preset", "fast",
+            "-c:a", "copy",
+            output_path,
+        ],
+        check=True,
+        capture_output=True,
+    )
+
+    os.remove(input_path)
+    logger.info(f"Vídeo convertido a mp4: {output_path}")
+    return output_path
