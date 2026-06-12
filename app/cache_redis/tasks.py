@@ -198,12 +198,12 @@ def _convert_to_mp4(input_path: str) -> str:
             "-c:v", "libx264",
             "-preset", "fast",
             "-c:a", "copy",
-            "-progress", "pipe:2",
             output_path,
         ],
         check=True,
         capture_output=True,
         text=True,
+        stdin=subprocess.DEVNULL,
     )
 
     logger.debug(f"ffmpeg output: {result.stderr}")
