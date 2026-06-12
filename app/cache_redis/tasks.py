@@ -106,12 +106,11 @@ def process_video(video_id: int):
 
         ew_crops_subdir = os.path.join(ew_output_dir, os.path.splitext(filename)[0])
 
-        # Subir recortes a MinIO y borrar localmente
+        # Subir recortes a MinIO
         fs_client.upload_directory(
             local_dir=ew_output_dir,
             remote_prefix=f"{user_id}/{group_id}/{video_id}/ew/",
         )
-        shutil.rmtree(ew_output_dir)
         logger.info(f"[{video_id}] Fase EW completada y subida a MinIO.")
 
         # -------------------------------------------------------
@@ -122,11 +121,13 @@ def process_video(video_id: int):
         dem_output_dir = os.path.join(job_tmp_dir, "dem_output")
         os.makedirs(dem_output_dir, exist_ok=True)
 
+        # mark_detection necesita ew_crops_subdir — se borra ew_output_dir después
         video_processor.mark_detection(
             crops_dir=ew_crops_subdir,
             output_dir=dem_output_dir,
         )
 
+        shutil.rmtree(ew_output_dir)
         fs_client.upload_directory(
             local_dir=dem_output_dir,
             remote_prefix=f"{user_id}/{group_id}/{video_id}/dem/",
