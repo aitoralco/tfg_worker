@@ -58,6 +58,67 @@ class VideoProcessor:
 
         logger.info(f"Recorte EW completado. Recortes en: {output_dir}")
 
+    def classify_whales(self, crops_dir: str) -> dict:
+        """
+        Fase CW: clasifica la especie de los recortes de ballena generados en EW.
+        Devuelve un dict con el resultado agregado por clase listo para subir a MinIO.
+        """
+        from ultralytics import YOLO
+        import os
+
+        logger.info(f"Iniciando clasificación de especies en: {crops_dir}")
+
+        model = YOLO(settings.CW_MODEL_PATH)
+        class_names = model.names
+
+        valid_ext = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
+        images = [
+            os.path.join(crops_dir, f)
+            for f in os.listdir(crops_dir)
+            if os.path.splitext(f)[1].lower() in valid_ext
+        ]
+
+        if not images:
+            logger.warning(f"CW: no se encontraron imágenes en {crops_dir}")
+            return {}
+
+        logger.info(f"CW: {len(images)} imágenes a clasificar")
+
+        counts = {}
+        confidences = {}
+        errors = 0
+
+        for img_path in images:
+            try:
+                results = model.predict(source=img_path, verbose=False)
+                probs = results[0].probs
+                top1 = int(probs.top1)
+                conf = float(probs.top1conf)
+                counts[top1] = counts.get(top1, 0) + 1
+                confidences.setdefault(top1, []).append(conf)
+            except Exception as e:
+                logger.warning(f"CW: error clasificando {img_path}: {e}")
+                errors += 1
+
+        total = sum(counts.values())
+
+        result = {
+            "total_images": len(images),
+            "classified_images": total,
+            "errors": errors,
+            "classes": {
+                class_names.get(cid, f"clase_{cid}"): {
+                    "count": count,
+                    "percentage": round(count / total * 100, 2),
+                    "avg_confidence": round(sum(confidences[cid]) / len(confidences[cid]), 4),
+                }
+                for cid, count in sorted(counts.items(), key=lambda x: -x[1])
+            },
+        }
+
+        logger.info(f"CW: completado — {total} clasificadas, {len(counts)} clases detectadas")
+        return result
+
     def mark_detection(self, crops_dir: str, output_dir: str):
         """
         Fase DEM (modelo 2): clasifica o analiza los recortes individuales de ballenas.
