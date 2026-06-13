@@ -84,6 +84,19 @@ class FileSystemClient:
             raise
 
 
+    def upload_json(self, data: dict, remote_key: str):
+        """Serializa un dict a JSON y lo sube a MinIO sin escribir en disco."""
+        import json
+        body = json.dumps(data, indent=2, ensure_ascii=False).encode("utf-8")
+        self.s3_client.put_object(
+            Bucket=self.bucket,
+            Key=remote_key,
+            Body=body,
+            ContentLength=len(body),
+            ContentType="application/json",
+        )
+        print(f"Uploaded JSON → {remote_key}")
+
     def upload_directory(self, local_dir: str, remote_prefix: str):
         """Sube recursivamente todos los archivos de un directorio local a MinIO."""
         import os

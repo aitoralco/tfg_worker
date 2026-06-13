@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     # Ajustes de directorios del worker
     DW_MODEL_PATH: str
     DEM_MODEL_PATH: str
+    CW_MODEL_PATH: str
 
 
 settings = Settings()

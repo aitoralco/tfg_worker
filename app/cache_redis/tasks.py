@@ -127,13 +127,24 @@ def process_video(video_id: int):
             output_dir=dem_output_dir,
         )
 
-        shutil.rmtree(ew_output_dir)
         fs_client.upload_directory(
             local_dir=dem_output_dir,
             remote_prefix=f"{user_id}/{group_id}/{video_id}/dem/",
         )
         shutil.rmtree(dem_output_dir)
         logger.info(f"[{video_id}] Fase DEM completada y subida a MinIO.")
+
+        # -------------------------------------------------------
+        # FASE 4: Clasificación de especies (CW)
+        # -------------------------------------------------------
+        classification = video_processor.classify_whales(crops_dir=ew_crops_subdir)
+        shutil.rmtree(ew_output_dir)
+
+        fs_client.upload_json(
+            data=classification,
+            remote_key=f"{user_id}/{group_id}/{video_id}/classification.json",
+        )
+        logger.info(f"[{video_id}] Fase CW completada — classification.json subido a MinIO.")
 
         # -------------------------------------------------------
         # FIN: Marcar como procesado y limpiar temporales
@@ -207,7 +218,7 @@ def _convert_to_mp4(input_path: str) -> str:
                 "ffmpeg", "-y",
                 "-i", input_path,
                 "-c:v", "libx264",
-                "-preset", "fast",
+                "-preset", "ultrafast",
                 "-c:a", "copy",
                 output_path,
             ],
