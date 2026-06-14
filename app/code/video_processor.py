@@ -73,8 +73,9 @@ class VideoProcessor:
 
         valid_ext = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
         images = [
-            os.path.join(crops_dir, f)
-            for f in os.listdir(crops_dir)
+            os.path.join(root, f)
+            for root, _, files in os.walk(crops_dir)
+            for f in files
             if os.path.splitext(f)[1].lower() in valid_ext
         ]
 
