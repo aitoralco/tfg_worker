@@ -1,31 +1,32 @@
-# Dockerfile for worker
-# Imagen de python
+# Dockerfile for tfg_worker
 FROM python:3.12-slim
 
-# Variables de entorno
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Directorio de trabajo dentro del contenedor
 WORKDIR /worker
 
-# Install native linux dependencies
+# Dependencias del sistema:
+#   ffmpeg          → conversión de vídeo anotado a mp4
+#   libgl1          → OpenCV (cv2)
+#   libglib2.0-0    → OpenCV (cv2)
+#   libsm6 libxext6 → OpenCV headless support
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
+    libgl1 \
     libglib2.0-0 \
+    libsm6 \
+    libxext6 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copiar archivo de requirements.txt
+# Directorio de procesamiento de vídeo (fuera de /tmp para no usar RAM)
+RUN mkdir -p /video_processing
+
 COPY ./requirements.txt /worker/requirements.txt
 
-# Instalar dependencias
 RUN pip install --no-cache-dir --upgrade -r /worker/requirements.txt
 
-# Copiar el resto de la aplicacion
 COPY . /worker
 
-# Exponer el puerto 8500
-EXPOSE 8500
-
-# Comando para arrancar el worker
-CMD ["python","-m" "app.main"]
+# Arrancar el worker RQ
+CMD ["python", "-m", "app.main"]
