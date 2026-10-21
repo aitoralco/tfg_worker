@@ -7,3 +7,6 @@ tmp
 runs
 ./code
 task_redis
+
+# Trained models (not distributable, see README)
+app/ai/trained_models/

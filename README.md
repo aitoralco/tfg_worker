@@ -46,14 +46,16 @@ app/
 ├── db/session.py        # engine, SessionLocal
 ├── filesystem/          # MinIO client (download / upload)
 ├── models/              # SQLAlchemy models (copy of the backend ones)
-└── ai/trained_models/   # trained YOLO weights
+└── ai/trained_models/   # trained YOLO weights (not in the repo, see Models)
 requirements.txt
 Dockerfile
 ```
 
 ## Models
 
-The weights used by the pipeline are in `app/ai/trained_models/`:
+> **The trained weights are not included in this repository.** The models were trained with images that do not belong to the author: they were provided only for this final degree project (TFG). Neither the images nor the models trained with them can be distributed.
+
+To run the worker, place your own weights in `app/ai/trained_models/` (the folder is ignored by git):
 
 | Variable | File | Use |
 |---|---|---|
@@ -61,7 +63,9 @@ The weights used by the pipeline are in `app/ai/trained_models/`:
 | `DEM_MODEL_PATH` | `detect_marks/best.pt` | Mark detection |
 | `CW_MODEL_PATH` | `classify_whales/best.pt` | Species classification |
 
-The other folders in `trained_models/` contain training runs (metrics and plots). The pipeline does not use them.
+You can also store them somewhere else and change the `*_MODEL_PATH` variables. The Docker image copies the folder if it exists locally.
+
+Without the weights the worker starts, but every video fails in the DW phase and its status is set to `error`.
 
 ## Environment variables
 

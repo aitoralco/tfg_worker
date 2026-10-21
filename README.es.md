@@ -46,14 +46,16 @@ app/
 ├── db/session.py        # engine, SessionLocal
 ├── filesystem/          # cliente de MinIO (descarga / subida)
 ├── models/              # modelos SQLAlchemy (copia de los del backend)
-└── ai/trained_models/   # pesos YOLO entrenados
+└── ai/trained_models/   # pesos YOLO entrenados (no están en el repo, ver Modelos)
 requirements.txt
 Dockerfile
 ```
 
 ## Modelos
 
-Los pesos que usa el pipeline están en `app/ai/trained_models/`:
+> **Los pesos entrenados no están incluidos en este repositorio.** Los modelos se entrenaron con imágenes que no pertenecen al autor: se cedieron únicamente para este Trabajo de Fin de Grado (TFG). Ni las imágenes ni los modelos entrenados con ellas se pueden distribuir.
+
+Para ejecutar el worker, coloca tus propios pesos en `app/ai/trained_models/` (la carpeta está ignorada por git):
 
 | Variable | Fichero | Uso |
 |---|---|---|
@@ -61,7 +63,9 @@ Los pesos que usa el pipeline están en `app/ai/trained_models/`:
 | `DEM_MODEL_PATH` | `detect_marks/best.pt` | Detección de marcas |
 | `CW_MODEL_PATH` | `classify_whales/best.pt` | Clasificación de especies |
 
-Las demás carpetas de `trained_models/` contienen ejecuciones de entrenamiento (métricas y gráficas). El pipeline no las usa.
+También puedes guardarlos en otro sitio y cambiar las variables `*_MODEL_PATH`. La imagen Docker copia la carpeta si existe en local.
+
+Sin los pesos el worker arranca, pero todos los vídeos fallan en la fase DW y su estado pasa a `error`.
 
 ## Variables de entorno
 
