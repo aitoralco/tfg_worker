@@ -1,12 +1,21 @@
+# Environment
 .env
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Local tooling (the project uses requirements.txt)
 pyproject.toml
 uv.lock
-trained
-app/tmp/*
-tmp
-runs
-./code
-task_redis
+
+# Processing / training output
+app/tmp/
+tmp/
+runs/
+trained/
 
 # Trained models (not distributable, see README)
 app/ai/trained_models/

@@ -1,5 +1,18 @@
-./tmp
-./runs
-./task_redis
-./trained
-./code
+# Environment and secrets
+.env
+.venv/
+venv/
+
+# Python cache
+**/__pycache__/
+**/*.py[cod]
+
+# Git and docs
+.git/
+README*.md
+
+# Processing / training output
+app/tmp/
+tmp/
+runs/
+trained/
