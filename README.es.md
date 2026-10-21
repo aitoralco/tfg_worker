@@ -69,7 +69,7 @@ Sin los pesos el worker arranca, pero todos los vídeos fallan en la fase DW y s
 
 ## Variables de entorno
 
-La configuración la carga `app/core/config.py` desde variables de entorno o desde un fichero `.env` en la raíz del proyecto.
+La configuración la carga `app/core/config.py` desde variables de entorno o desde un fichero `.env` en la raíz del proyecto (ver `.env.example`).
 
 | Grupo | Variables |
 |---|---|
@@ -102,7 +102,7 @@ docker compose logs -f worker-rq    # trabajos y fases según se ejecutan
 Hace falta Linux o WSL: RQ no funciona en Windows nativo.
 
 1. Levanta los servicios de datos desde `../tfg_dockercompose`, con el esquema de la BD ya creado (ver `../tfg_backend/README.es.md`).
-2. Crea un `.env` con las variables de arriba, apuntando los hosts a `localhost` y las rutas de los modelos a los ficheros locales, p. ej. `DW_MODEL_PATH=app/ai/trained_models/detect_whales/best.pt`.
+2. Crea `.env` a partir de `.env.example`, con las mismas credenciales que el `.env` del compose. Los hosts apuntan a `localhost` y las rutas de los modelos a los ficheros locales.
 3. Comprueba que `ffmpeg` está instalado y que el usuario puede escribir en `/video_processing`.
 4. Crea un entorno virtual e instala las dependencias:
    ```bash
@@ -119,5 +119,9 @@ Hace falta Linux o WSL: RQ no funciona en Windows nativo.
 
 - **Los nombres de los trabajos se comparten con el backend.** El backend encola `app.cache_redis.tasks.process_video` (tiene una función vacía con ese nombre en `tfg_backend/app/cache_redis/tasks.py`). Aquí la función tiene que existir con la misma ruta de módulo y la misma firma.
 - **Los modelos de BD son una copia de los del backend.** Si el esquema cambia en el backend, hay que actualizar también `app/models/` aquí. El worker no ejecuta migraciones.
-- **Los IDs de estado del vídeo están fijados en `tasks.py`** (`1` = `error` … `7` = `processed`). Dependen del orden de inserción del seed del backend (`tfg_backend/app/db/starter.py`).
-- **Sin GPU en Docker Compose.** El compose no reserva GPU, así que la inferencia va por CPU y el procesamiento es lento.
+- **Los estados del vídeo se buscan por nombre** (`processing_dw`, `processed`…), así que tienen que existir en la BD. Los inserta el seed del backend (`tfg_backend/app/db/starter.py`).
+- **Solo CPU.** El compose no reserva GPU, así que `requirements.txt` instala la versión CPU de PyTorch (`+cpu`, del índice de PyTorch) para que la imagen sea más pequeña. El procesamiento es lento. Para usar GPU, hay que instalar la versión CUDA de `torch`/`torchvision` y reservar la GPU en el compose.
+
+## Licencia
+
+© 2026 Aitor Alonso Coloma. Con licencia [Creative Commons Atribución-NoComercial 4.0 Internacional (CC BY-NC 4.0)](LICENSE): puedes usarlo, compartirlo y adaptarlo con fines no comerciales, siempre que cites al autor y enlaces la licencia. La licencia cubre solo el código: los modelos entrenados y las imágenes usadas para entrenarlos no se incluyen y no están cubiertos por ella (ver [Modelos](#modelos)).

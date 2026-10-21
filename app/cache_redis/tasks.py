@@ -44,7 +44,7 @@ def process_video(video_id: int):
         # -------------------------------------------------------
         # FASE 0: Descarga del video
         # -------------------------------------------------------
-        _set_status(db, video, status_id=3)  # processing_0
+        _set_status(db, video, "processing_0")
 
         video_path = os.path.join(job_tmp_dir, filename)
         fs_client.download_video_file(
@@ -58,7 +58,7 @@ def process_video(video_id: int):
         # -------------------------------------------------------
         # FASE 1: Detección de ballenas (modelo DW)
         # -------------------------------------------------------
-        _set_status(db, video, status_id=4)  # processing_dw
+        _set_status(db, video, "processing_dw")
 
         dw_output_dir = os.path.join(job_tmp_dir, "dw_output")
         os.makedirs(dw_output_dir, exist_ok=True)
@@ -88,7 +88,7 @@ def process_video(video_id: int):
         # -------------------------------------------------------
         # FASE 2: Proceso intermedio — recorte de ballenas (EW)
         # -------------------------------------------------------
-        _set_status(db, video, status_id=5)  # processing_ew
+        _set_status(db, video, "processing_ew")
 
         ew_output_dir = os.path.join(job_tmp_dir, "ew_output")
         os.makedirs(ew_output_dir, exist_ok=True)
@@ -116,7 +116,7 @@ def process_video(video_id: int):
         # -------------------------------------------------------
         # FASE 3: Modelo 2 (DEM) — placeholder
         # -------------------------------------------------------
-        _set_status(db, video, status_id=6)  # processing_dem
+        _set_status(db, video, "processing_dem")
 
         dem_output_dir = os.path.join(job_tmp_dir, "dem_output")
         os.makedirs(dem_output_dir, exist_ok=True)
@@ -151,7 +151,7 @@ def process_video(video_id: int):
         # -------------------------------------------------------
         # FIN: Marcar como procesado y limpiar temporales
         # -------------------------------------------------------
-        _set_status(db, video, status_id=7)  # processed
+        _set_status(db, video, "processed")
         logger.info(f"[{video_id}] Procesado con éxito.")
 
     except Exception as e:
@@ -159,7 +159,7 @@ def process_video(video_id: int):
         try:
             video = db.query(VideoModel).get(video_id)
             if video:
-                _set_status(db, video, status_id=1)  # error
+                _set_status(db, video, "error")
         except Exception:
             pass
 
@@ -178,9 +178,14 @@ def process_video(video_id: int):
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _set_status(db: Session, video, status_id: int):
-    """Actualiza el status del video y hace commit inmediato."""
-    video.status_id = status_id
+def _set_status(db: Session, video, status_name: str):
+    """Actualiza el status del video (por nombre) y hace commit inmediato."""
+    from app.models.video_status_model import VideoStatusModel
+
+    status = db.query(VideoStatusModel).filter(VideoStatusModel.status_name == status_name).first()
+    if status is None:
+        raise ValueError(f"Video status '{status_name}' not found in DB (run the backend seed)")
+    video.status_id = status.id
     db.commit()
 
 

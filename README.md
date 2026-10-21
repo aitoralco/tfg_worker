@@ -69,7 +69,7 @@ Without the weights the worker starts, but every video fails in the DW phase and
 
 ## Environment variables
 
-Settings are loaded by `app/core/config.py` from environment variables or from a `.env` file in the project root.
+Settings are loaded by `app/core/config.py` from environment variables or from a `.env` file in the project root (see `.env.example`).
 
 | Group | Variables |
 |---|---|
@@ -102,7 +102,7 @@ docker compose logs -f worker-rq    # jobs and phases as they run
 Linux or WSL is required: RQ does not run on native Windows.
 
 1. Start the data services from `../tfg_dockercompose`, with the DB schema already created (see `../tfg_backend/README.md`).
-2. Create a `.env` with the variables above, pointing hosts to `localhost` and the model paths to the local files, e.g. `DW_MODEL_PATH=app/ai/trained_models/detect_whales/best.pt`.
+2. Create `.env` from `.env.example`, using the same credentials as the compose `.env`. Hosts point to `localhost` and the model paths to the local files.
 3. Make sure `ffmpeg` is installed and that the user can write to `/video_processing`.
 4. Create a virtual environment and install dependencies:
    ```bash
@@ -119,5 +119,9 @@ Linux or WSL is required: RQ does not run on native Windows.
 
 - **Job names are shared with the backend.** The backend enqueues `app.cache_redis.tasks.process_video` (it has an empty function with that name in `tfg_backend/app/cache_redis/tasks.py`). The function must exist with the same module path and signature here.
 - **The DB models are a copy of the backend ones.** If the schema changes in the backend, update `app/models/` here too. The worker does not run migrations.
-- **Video status IDs are fixed in `tasks.py`** (`1` = `error` … `7` = `processed`). They rely on the insertion order of the backend seed (`tfg_backend/app/db/starter.py`).
-- **No GPU in Docker Compose.** The compose file does not reserve a GPU, so inference runs on the CPU and processing is slow.
+- **Video statuses are looked up by name** (`processing_dw`, `processed`…), so they must exist in the DB. The backend seed (`tfg_backend/app/db/starter.py`) inserts them.
+- **CPU only.** The compose file does not reserve a GPU, so `requirements.txt` installs the CPU build of PyTorch (`+cpu`, from the PyTorch index) to keep the image small. Processing is slow. To use a GPU, install the CUDA build of `torch`/`torchvision` and reserve the GPU in the compose file.
+
+## License
+
+© 2026 Aitor Alonso Coloma. Licensed under [Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](LICENSE): you can use, share and adapt it for non-commercial purposes, as long as you credit the author and link to the license. The license covers the code only: the trained models and the images used to train them are not included and are not covered by it (see [Models](#models)).
