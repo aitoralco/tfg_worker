@@ -124,4 +124,4 @@ Hace falta Linux o WSL: RQ no funciona en Windows nativo.
 
 ## Licencia
 
-© 2026 Aitor Alonso Coloma. Con licencia [Creative Commons Atribución-NoComercial 4.0 Internacional (CC BY-NC 4.0)](LICENSE): puedes usarlo, compartirlo y adaptarlo con fines no comerciales, siempre que cites al autor y enlaces la licencia. La licencia cubre solo el código: los modelos entrenados y las imágenes usadas para entrenarlos no se incluyen y no están cubiertos por ella (ver [Modelos](#modelos)).
+© 2026 Aitor Alonso Coloma. Con licencia [MIT](LICENSE). La licencia cubre solo el código: los modelos entrenados y las imágenes usadas para entrenarlos no se incluyen y no están cubiertos por ella (ver [Modelos](#modelos)).
